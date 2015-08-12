@@ -23,24 +23,30 @@ Window {
         Button {
             text: "容易"
             onClicked: {
-                table.columns = 4
-                recalculateMine()
+                table.columns = 8
+                table.rows = 8
+                table.numMine = 10
+                rearrangeMine()
             }
         }
 
         Button {
             text: "普通"
             onClicked: {
-                table.columns = 8
-                recalculateMine()
+                table.columns = 16
+                table.rows = 16
+                table.numMine = 40
+                rearrangeMine()
             }
         }
 
         Button {
             text: "困難"
             onClicked: {
-                table.columns = 16
-                recalculateMine()
+                table.columns = 30
+                table.rows = 16
+                table.numMine = 99
+                rearrangeMine()
             }
         }
     }
@@ -50,36 +56,21 @@ Window {
         columns: 16
         rows: columns
         anchors.centerIn: parent
-        property int numberOfMine
+        property int numMine
 
         Repeater {
-            model: table.rows *  table.columns
+            id: cell
+            model: table.columns * table.rows
             Button {
-                width: 360 / table.columns
+                width: 360 / table.rows
                 height: 360 / table.columns
+                text: ""
+                property bool isMine: false
+                property bool flag: false
+                property bool opened: false
+                property int numMineAround: 0
                 onClicked: {
-                    if (text == "") {
-                        if (modelData == table.numberOfMine) {
-                          text = "X" // 踩到地雷
-                            animation.start()
-                        }
-                        else if (modelData == (table.numberOfMine - 1) && (table.numberOfMine % table.columns != 0)) {
-                          text = "1" // 這是地雷左邊
-                        }
-                        else if (modelData == (table.numberOfMine + 1) && (table.numberOfMine % table.columns != (table.columns - 1))) {
-                          text = "1" // 這是地雷右邊
-                        }
-                        else if (modelData == (table.numberOfMine - table.columns) && (Math.floor(table.numberOfMine / table.columns) != 0)) {
-                          text = "1" // 這是地雷上面
-                        }
-                        else if (modelData == (table.numberOfMine + table.columns) && (Math.ceil(table.numberOfMine / table.columns) != table.columns)) {
-                          text = "1" // 這是地雷下面
-                        }
-                        else {
-                          text = " " // 沒有地雷
-                          opacity = 0.25
-                        }
-                    }
+                    if (!flag) open(index);
                 }
 
                 Rectangle {
@@ -102,12 +93,77 @@ Window {
         }
     }
 
-    function recalculateMine() {
-        // 因為尺寸變動了，所以重新計算地雷位置
-        table.numberOfMine = Math.round(Math.random() * Math.pow(table.columns, 2))
+    function rearrangeMine() {
+        var shift = [-table.columns-1, -table.columns, -table.columns+1,
+                     -1, 1, table.columns-1, table.columns, table.columns+1]
+        // planting mines
+        for(var i = 0, j; i < table.numMine; ++i) {
+            do {
+                j = Math.floor(Math.random() * cell.model);
+            } while (cell.itemAt(j).isMine);
+            cell.itemAt(j).isMine = true;
+        }
+        // calculating mines around
+        for(var i = 0; i < table.rows; ++i) {
+            for(var j = 0; j < table.columns; ++j) {
+                var index = i * table.columns + j;
+                if(i && j)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[0]).isMine // upper left
+                if(i)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[1]).isMine // upper middle
+                if(i && j < table.columns - 1)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[2]).isMine // upper right
+                if(j)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[3]).isMine // middle left
+                if(j < table.columns - 1)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[4]).isMine // middle right
+                if(i < table.rows - 1 && j)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[5]).isMine // lower left
+                if(i < table.rows - 1)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[6]).isMine // lower middle
+                if(i < table.rows - 1 && j < table.columns - 1)
+                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[7]).isMine // lower right
+            }
+        }
+    }
+
+    /*property variant shift: [-table.columns-1, -table.columns, -table.columns+1,
+    -1, 1, table.columns-1, table.columns, table.columns+1]*/
+
+    function open(index) {
+        var shift = [-table.columns-1, -table.columns, -table.columns+1,
+                     -1, 1, table.columns-1, table.columns, table.columns+1]
+        cell.itemAt(index).opened = true;
+        if (cell.itemAt(index).isMine) {
+            cell.itemAt(index).text = 'X'
+            animation.start()
+        }
+        else /*if (cell.itemAt(index).numMineAround > 0)*/ {
+            cell.itemAt(index).text = cell.itemAt(index).numMineAround
+        }
+        /*else {
+            var i = index / table.rows;
+            var j = index % table.columns;
+            if(i && j &&
+                    !cell.itemAt(index + shift[0]).opened) open(index + shift[0]) // upper left
+            if(i &&
+                    !cell.itemAt(index + shift[1]).opened) open(index + shift[1]) // upper middle
+            if(i && j < table.columns - 1 &&
+                    !cell.itemAt(index + shift[2]).opened) open(index + shift[2]) // upper right
+            if(j &&
+                    !cell.itemAt(index + shift[3]).opened) open(index + shift[3]) // middle left
+            if(j < table.columns - 1 &&
+                    !cell.itemAt(index + shift[4]).opened) open(index + shift[4]) // middle right
+            if(i < table.rows - 1 && j &&
+                    !cell.itemAt(index + shift[5]).opened) open(index + shift[5])// lower left
+            if(i < table.rows - 1 &&
+                    !cell.itemAt(index + shift[6]).opened) open(index + shift[6]) // lower middle
+            if(i < table.rows - 1 && j < table.columns - 1 &&
+                    !cell.itemAt(index + shift[7]).opened) open(index + shift[7]) // lower right
+        }*/
     }
 
     Component.onCompleted: {
-        recalculateMine()
+        rearrangeMine()
     }
 }
