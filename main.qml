@@ -77,17 +77,13 @@ Window {
                     id: highlight
                     anchors.fill: parent
                     color: "red"
-                    opacity: 0
-                }
-
-                NumberAnimation {
-                    id: animation
-                    target: highlight
-                    property: "opacity"
-                    from: 0
-                    to: 0.8
-                    duration: 1000
-                    easing.type: Easing.OutBounce
+                    opacity: (parent.isMine && parent.opened) ? 0.8 : 0
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: 1000
+                            easing.type: Easing.OutBounce
+                        }
+                    }
                 }
             }
         }
@@ -104,7 +100,7 @@ Window {
             cell.itemAt(j).isMine = true;
         }
         // calculating mines around
-        for(var i = 0; i < table.rows; ++i) {
+        /*for(var i = 0; i < table.rows; ++i) {
             for(var j = 0; j < table.columns; ++j) {
                 var index = i * table.columns + j;
                 if(i && j)
@@ -124,7 +120,7 @@ Window {
                 if(i < table.rows - 1 && j < table.columns - 1)
                     cell.itemAt(index).numMineAround += cell.itemAt(index + shift[7]).isMine // lower right
             }
-        }
+        }*/
     }
 
     /*property variant shift: [-table.columns-1, -table.columns, -table.columns+1,
@@ -136,7 +132,7 @@ Window {
         cell.itemAt(index).opened = true;
         if (cell.itemAt(index).isMine) {
             cell.itemAt(index).text = 'X'
-            animation.start()
+            //animation.start()
         }
         else /*if (cell.itemAt(index).numMineAround > 0)*/ {
             cell.itemAt(index).text = cell.itemAt(index).numMineAround
