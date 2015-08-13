@@ -5,7 +5,8 @@ import QtQuick.Controls 1.2
 Window {
     visible: true
     width: 480
-    height: 480
+    height: width + 60
+    minimumWidth: 480
     title: "開源踩地雷"
 
     Rectangle {
@@ -16,6 +17,7 @@ Window {
     }
 
     Row {
+        id: newGame
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: 8
@@ -33,9 +35,7 @@ Window {
         Button {
             text: "普通"
             onClicked: {
-                table.columns = 16
-                table.rows = 16
-                table.numMine = 40
+                startNewGame(16, 16, 40)
                 rearrangeMine()
             }
         }
@@ -57,13 +57,13 @@ Window {
         rows: columns
         anchors.centerIn: parent
         property int numMine
-
+        property int cellWidth: 30//Math.min()
         Repeater {
             id: cell
             model: table.columns * table.rows
             Button {
-                width: 360 / table.rows
-                height: 360 / table.columns
+                width: table.cellWidth
+                height: width
                 text: ""
                 property bool isMine: false
                 property bool flag: false
@@ -89,77 +89,71 @@ Window {
         }
     }
 
-    function rearrangeMine() {
-        var shift = [-table.columns-1, -table.columns, -table.columns+1,
-                     -1, 1, table.columns-1, table.columns, table.columns+1]
-        // planting mines
-        for(var i = 0, j; i < table.numMine; ++i) {
-            do {
-                j = Math.floor(Math.random() * cell.model);
-            } while (cell.itemAt(j).isMine);
-            cell.itemAt(j).isMine = true;
-        }
-        // calculating mines around
-        /*for(var i = 0; i < table.rows; ++i) {
-            for(var j = 0; j < table.columns; ++j) {
-                var index = i * table.columns + j;
-                if(i && j)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[0]).isMine // upper left
-                if(i)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[1]).isMine // upper middle
-                if(i && j < table.columns - 1)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[2]).isMine // upper right
-                if(j)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[3]).isMine // middle left
-                if(j < table.columns - 1)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[4]).isMine // middle right
-                if(i < table.rows - 1 && j)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[5]).isMine // lower left
-                if(i < table.rows - 1)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[6]).isMine // lower middle
-                if(i < table.rows - 1 && j < table.columns - 1)
-                    cell.itemAt(index).numMineAround += cell.itemAt(index + shift[7]).isMine // lower right
-            }
-        }*/
+    function startNewGame(col, row, num_mine) {
+        table.columns = col;
+        table.rows = row;
+        table.numMine = num_mine;
+        cell.model = 0;
+        cell.model = col * row;
+        rearrangeMine();
     }
 
-    /*property variant shift: [-table.columns-1, -table.columns, -table.columns+1,
-    -1, 1, table.columns-1, table.columns, table.columns+1]*/
+    function rearrangeMine() {
+        var ary = [];
+        for(var i = 0; i < table.rows; ++i) {
+            ary[i] = [];
+            for(var j = 0; j < table.columns; ++j) {
+                ary[i][j] = cell.itemAt(i * table.columns + j).isMine ? -65536 : 0;
+            }
+        }
+        // plant mines
+        for(var k = 0, index; k < table.numMine; ++k) {
+            do {
+                index = Math.floor(Math.random() * cell.model);
+            } while (cell.itemAt(index).isMine);
+            cell.itemAt(index).isMine = true;
+            // calc mines around
+            var x = Math.floor(index / table.rows), y = index % table.columns;
+            ary[x][y] = -65536;
+            for(var dx = -1; dx <= 1; ++dx) {
+                for(var dy = -1; dy <= 1; ++dy) {
+                    if(ary[x + dx] === undefined) break;
+                    if(ary[x + dx][y + dy] === undefined) continue;
+                    ary[x + dx][y + dy] += 1;
+                }
+            }
+        }
+        // update cells properties
+        for(var i = 0; i < table.rows; ++i) {
+            for(var j = 0; j < table.columns; ++j) {
+                cell.itemAt(i * table.columns + j).numMineAround = ary[i][j];
+            }
+        }
+    }
 
     function open(index) {
-        var shift = [-table.columns-1, -table.columns, -table.columns+1,
-                     -1, 1, table.columns-1, table.columns, table.columns+1]
-        cell.itemAt(index).opened = true;
+        if(cell.itemAt(index).opened) return;
+        else cell.itemAt(index).opened = true;
         if (cell.itemAt(index).isMine) {
             cell.itemAt(index).text = 'X'
-            //animation.start()
         }
-        else /*if (cell.itemAt(index).numMineAround > 0)*/ {
-            cell.itemAt(index).text = cell.itemAt(index).numMineAround
+        else {
+            cell.itemAt(index).text = cell.itemAt(index).numMineAround;
+            if (!cell.itemAt(index).numMineAround) {
+                // no mines around; open cells around automatically
+                var x = Math.floor(index / table.rows), y = index % table.columns;
+                for(var dx = -1; dx <= 1; ++dx) {
+                    for(var dy = -1; dy <= 1; ++dy) {
+                        var shiftedIndex = (x + dx) * table.columns + (y + dy);
+                        if(cell.itemAt(shiftedIndex) !== null) open(shiftedIndex);
+                    }
+                }
+            }
         }
-        /*else {
-            var i = index / table.rows;
-            var j = index % table.columns;
-            if(i && j &&
-                    !cell.itemAt(index + shift[0]).opened) open(index + shift[0]) // upper left
-            if(i &&
-                    !cell.itemAt(index + shift[1]).opened) open(index + shift[1]) // upper middle
-            if(i && j < table.columns - 1 &&
-                    !cell.itemAt(index + shift[2]).opened) open(index + shift[2]) // upper right
-            if(j &&
-                    !cell.itemAt(index + shift[3]).opened) open(index + shift[3]) // middle left
-            if(j < table.columns - 1 &&
-                    !cell.itemAt(index + shift[4]).opened) open(index + shift[4]) // middle right
-            if(i < table.rows - 1 && j &&
-                    !cell.itemAt(index + shift[5]).opened) open(index + shift[5])// lower left
-            if(i < table.rows - 1 &&
-                    !cell.itemAt(index + shift[6]).opened) open(index + shift[6]) // lower middle
-            if(i < table.rows - 1 && j < table.columns - 1 &&
-                    !cell.itemAt(index + shift[7]).opened) open(index + shift[7]) // lower right
-        }*/
+
     }
 
     Component.onCompleted: {
-        rearrangeMine()
+        rearrangeMine();
     }
 }
