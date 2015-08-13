@@ -7,6 +7,7 @@ Window {
     width: 480
     height: width + 60
     minimumWidth: 480
+    minimumHeight: 540
     title: "開源踩地雷"
 
     Rectangle {
@@ -15,7 +16,6 @@ Window {
         color: "#33b5e5"
         radius: 20
     }
-
     Row {
         id: newGame
         anchors.top: parent.top
@@ -25,46 +25,37 @@ Window {
         Button {
             text: "容易"
             onClicked: {
-                table.columns = 8
-                table.rows = 8
-                table.numMine = 10
-                rearrangeMine()
+                startNewGame(8, 8, 10);
             }
         }
 
         Button {
             text: "普通"
             onClicked: {
-                startNewGame(16, 16, 40)
-                rearrangeMine()
+                startNewGame(16, 16, 40);
             }
         }
 
         Button {
             text: "困難"
             onClicked: {
-                table.columns = 30
-                table.rows = 16
-                table.numMine = 99
-                rearrangeMine()
+                startNewGame(30, 16, 99);
             }
         }
     }
-
     Grid {
         id: table
         columns: 0
         rows: 0
         anchors.centerIn: parent
-        property int numMine
-        property int cellWidth: 30//Math.min()
+        property int cellWidth: Math.min(40, parent.width / columns)
         Repeater {
             id: cell
             model: table.columns * table.rows
             Button {
                 width: table.cellWidth
                 height: width
-                text: opened ? (isMine ? "X" : numMineAround) : (marked ? "+" : "");
+                text: opened ? (isMine ? "X" : numMineAround) : (marked ? "+" : "")
                 property bool isMine: false
                 property bool marked: false
                 property bool opened: false
@@ -76,7 +67,14 @@ Window {
                     anchors.fill: parent
                     acceptedButtons: Qt.RightButton
                     onClicked: {
-                        parent.marked = !parent.marked;
+                        if(parent.marked) {
+                            parent.marked = false;
+                            numMineLeft++;
+                        }
+                        else {
+                            parent.marked = true;
+                            numMineLeft--;
+                        }
                     }
                 }
                 Rectangle {
@@ -94,11 +92,21 @@ Window {
             }
         }
     }
+    Text {
+        anchors.right: parent.right
+        anchors.verticalCenter: newGame.verticalCenter
+        anchors.margins: 20
+        text: numMineLeft
+    }
+
+    property int numMine
+    property int numMineLeft
 
     function startNewGame(col, row, num_mine) {
         table.columns = col;
         table.rows = row;
-        table.numMine = num_mine;
+        numMine = num_mine;
+        numMineLeft = num_mine;
         rearrangeMine();
     }
 
@@ -117,13 +125,13 @@ Window {
             }
         }
         // plant mines
-        for(var k = 0, index; k < table.numMine; ++k) {
+        for(var k = 0, pos; k < numMine; ++k) {
             do {
-                index = Math.floor(Math.random() * cell.model);
-            } while (cell.itemAt(index).isMine);
-            cell.itemAt(index).isMine = true;
+                pos = Math.floor(Math.random() * cell.model);
+            } while (cell.itemAt(pos).isMine);
+            cell.itemAt(pos).isMine = true;
             // calc mines around
-            var x = Math.floor(index / table.rows), y = index % table.columns;
+            var x = Math.floor(pos / table.columns), y = pos % table.columns;
             ary[x][y] = -65536;
             for(var dx = -1; dx <= 1; ++dx) {
                 for(var dy = -1; dy <= 1; ++dy) {
@@ -142,7 +150,7 @@ Window {
     }
 
     function open(index) {
-        var x = Math.floor(index / table.rows), y = index % table.columns;
+        var x = Math.floor(index / table.columns), y = index % table.columns;
         if(cell.itemAt(index).opened || cell.itemAt(index).marked) return;
         else cell.itemAt(index).opened = true;
         if (!cell.itemAt(index).numMineAround) {
@@ -150,7 +158,7 @@ Window {
             for(var dx = -1; dx <= 1; ++dx) {
                 for(var dy = -1; dy <= 1; ++dy) {
                     var shiftedIndex = (x + dx) * table.columns + (y + dy);
-                    if(0 <= x + dx && x + dx < table.rows && 0 <= y + dy && y + dy < table.columns) open(shiftedIndex);
+                    if(0 <= x + dx && x + dx < table.columns && 0 <= y + dy && y + dy < table.rows) open(shiftedIndex);
                 }
             }
         }
