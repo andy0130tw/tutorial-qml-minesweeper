@@ -53,8 +53,8 @@ Window {
 
     Grid {
         id: table
-        columns: 16
-        rows: columns
+        columns: 0
+        rows: 0
         anchors.centerIn: parent
         property int numMine
         property int cellWidth: 30//Math.min()
@@ -64,15 +64,21 @@ Window {
             Button {
                 width: table.cellWidth
                 height: width
-                text: ""
+                text: opened ? (isMine ? "X" : numMineAround) : (marked ? "+" : "");
                 property bool isMine: false
-                property bool flag: false
+                property bool marked: false
                 property bool opened: false
                 property int numMineAround: 0
                 onClicked: {
-                    if (!flag) open(index);
+                    if (!marked) open(index);
                 }
-
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.RightButton
+                    onClicked: {
+                        parent.marked = !parent.marked;
+                    }
+                }
                 Rectangle {
                     id: highlight
                     anchors.fill: parent
@@ -93,17 +99,21 @@ Window {
         table.columns = col;
         table.rows = row;
         table.numMine = num_mine;
-        cell.model = 0;
-        cell.model = col * row;
         rearrangeMine();
     }
 
     function rearrangeMine() {
+        // init
         var ary = [];
         for(var i = 0; i < table.rows; ++i) {
             ary[i] = [];
             for(var j = 0; j < table.columns; ++j) {
-                ary[i][j] = cell.itemAt(i * table.columns + j).isMine ? -65536 : 0;
+                ary[i][j] = 0;
+                var index = i * table.columns + j;
+                cell.itemAt(index).numMineAround = 0;
+                cell.itemAt(index).opened = false;
+                cell.itemAt(index).marked = false;
+                cell.itemAt(index).isMine = false;
             }
         }
         // plant mines
@@ -132,25 +142,18 @@ Window {
     }
 
     function open(index) {
-        if(cell.itemAt(index).opened) return;
+        var x = Math.floor(index / table.rows), y = index % table.columns;
+        if(cell.itemAt(index).opened || cell.itemAt(index).marked) return;
         else cell.itemAt(index).opened = true;
-        if (cell.itemAt(index).isMine) {
-            cell.itemAt(index).text = 'X'
-        }
-        else {
-            cell.itemAt(index).text = cell.itemAt(index).numMineAround;
-            if (!cell.itemAt(index).numMineAround) {
-                // no mines around; open cells around automatically
-                var x = Math.floor(index / table.rows), y = index % table.columns;
-                for(var dx = -1; dx <= 1; ++dx) {
-                    for(var dy = -1; dy <= 1; ++dy) {
-                        var shiftedIndex = (x + dx) * table.columns + (y + dy);
-                        if(cell.itemAt(shiftedIndex) !== null) open(shiftedIndex);
-                    }
+        if (!cell.itemAt(index).numMineAround) {
+            // no mines around; open cells around automatically
+            for(var dx = -1; dx <= 1; ++dx) {
+                for(var dy = -1; dy <= 1; ++dy) {
+                    var shiftedIndex = (x + dx) * table.columns + (y + dy);
+                    if(0 <= x + dx && x + dx < table.rows && 0 <= y + dy && y + dy < table.columns) open(shiftedIndex);
                 }
             }
         }
-
     }
 
     Component.onCompleted: {
