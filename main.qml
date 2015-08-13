@@ -4,10 +4,10 @@ import QtQuick.Controls 1.2
 
 Window {
     visible: true
-    width: 480
-    height: width + 60
+    width: 640
+    height: 480
     minimumWidth: 480
-    minimumHeight: 540
+    minimumHeight: 480
     title: "開源踩地雷"
 
     Rectangle {
@@ -61,19 +61,35 @@ Window {
                 property bool opened: false
                 property int numMineAround: 0
                 onClicked: {
-                    if (!marked) open(index);
+                    open(index);
                 }
                 MouseArea {
                     anchors.fill: parent
-                    acceptedButtons: Qt.RightButton
+                    acceptedButtons: Qt.RightButton | Qt.MiddleButton
                     onClicked: {
-                        if(parent.marked) {
-                            parent.marked = false;
-                            numMineLeft++;
+                        if (mouse.button == Qt.RightButton) {
+                            if(parent.marked) {
+                                parent.marked = false;
+                                numMineLeft++;
+                            }
+                            else {
+                                parent.marked = true;
+                                numMineLeft--;
+                            }
                         }
-                        else {
-                            parent.marked = true;
-                            numMineLeft--;
+                        else{
+                            if(!parent.opened) return;
+                            var count = 0;
+                            var x = Math.floor(index / table.columns), y = index % table.columns;
+                            for(var dx = -1; dx <= 1; ++dx) {
+                                for(var dy = -1; dy <= 1; ++dy) {
+                                    var shiftedIndex = index + dx * table.columns + dy;
+                                    if (0 <= x + dx && x + dx < table.rows && 0 <= y + dy && y + dy < table.columns && cell.itemAt(shiftedIndex).marked) {
+                                        count++;console.log("x")
+                                    }
+                                }
+                            }
+                            if (parent.numMineAround == count) openAround(index);
                         }
                     }
                 }
@@ -150,15 +166,18 @@ Window {
     }
 
     function open(index) {
+        if (cell.itemAt(index).opened || cell.itemAt(index).marked) return;
+        cell.itemAt(index).opened = true;
+        if (!cell.itemAt(index).numMineAround) openAround(index);
+    }
+
+    function openAround(index) {
         var x = Math.floor(index / table.columns), y = index % table.columns;
-        if(cell.itemAt(index).opened || cell.itemAt(index).marked) return;
-        else cell.itemAt(index).opened = true;
-        if (!cell.itemAt(index).numMineAround) {
-            // no mines around; open cells around automatically
-            for(var dx = -1; dx <= 1; ++dx) {
-                for(var dy = -1; dy <= 1; ++dy) {
-                    var shiftedIndex = (x + dx) * table.columns + (y + dy);
-                    if(0 <= x + dx && x + dx < table.columns && 0 <= y + dy && y + dy < table.rows) open(shiftedIndex);
+        for(var dx = -1; dx <= 1; ++dx) {
+            for(var dy = -1; dy <= 1; ++dy) {
+                var shiftedIndex = index + dx * table.columns + dy;
+                if (0 <= x + dx && x + dx < table.rows && 0 <= y + dy && y + dy < table.columns) {
+                    open(shiftedIndex);
                 }
             }
         }
