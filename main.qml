@@ -4,10 +4,10 @@ import QtQuick.Controls 1.2
 
 Window {
     visible: true
-    width: 640
-    height: 480
+    width: 480
+    height: 640
     minimumWidth: 480
-    minimumHeight: 480
+    minimumHeight: 640
     title: "開源踩地雷"
 
     Rectangle {
@@ -48,7 +48,8 @@ Window {
         columns: 0
         rows: 0
         anchors.centerIn: parent
-        property int cellWidth: Math.min(40, parent.width / columns)
+        anchors.margins: 60
+        property int cellWidth: Math.min(40, parent.width / columns, parent.height / rows)
         Repeater {
             id: cell
             model: table.columns * table.rows
@@ -72,7 +73,7 @@ Window {
                                 parent.marked = false;
                                 numMineLeft++;
                             }
-                            else {
+                            else if(!parent.opened) {
                                 parent.marked = true;
                                 numMineLeft--;
                             }
@@ -85,7 +86,7 @@ Window {
                                 for(var dy = -1; dy <= 1; ++dy) {
                                     var shiftedIndex = index + dx * table.columns + dy;
                                     if (0 <= x + dx && x + dx < table.rows && 0 <= y + dy && y + dy < table.columns && cell.itemAt(shiftedIndex).marked) {
-                                        count++;console.log("x")
+                                        count++;
                                     }
                                 }
                             }
