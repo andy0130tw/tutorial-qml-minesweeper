@@ -57,6 +57,7 @@ Window {
                 width: table.cellWidth
                 height: width
                 text: opened ? (isMine ? "X" : numMineAround) : (marked ? "+" : "")
+                opacity: opened && (numMineAround == 0) ? .3 : 1
                 property bool isMine: false
                 property bool marked: false
                 property bool opened: false
@@ -64,6 +65,13 @@ Window {
                 onClicked: {
                     open(index);
                 }
+                Behavior on opacity {
+                  NumberAnimation {
+                    duration: 100
+                    easing.type: Easing.OutCubic
+                  }
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.RightButton | Qt.MiddleButton
@@ -97,12 +105,32 @@ Window {
                 Rectangle {
                     id: highlight
                     anchors.fill: parent
-                    color: "red"
-                    opacity: (parent.isMine && parent.opened) ? 0.8 : 0
-                    Behavior on opacity {
+                    opacity: 0.25
+                    //color: "blue"
+                    states: [
+                        State {
+                            name: "red"
+                            when: opened && isMine
+                            PropertyChanges {
+                                target: highlight
+                                opacity: 0.8
+                                color: "red"
+                            }
+                        },
+                        State {
+                            name: "revealed"
+                            when: opened && !isMine
+                            PropertyChanges {
+                                target: highlight
+                                opacity: 0
+                            }
+                        }
+                    ]
+                        Behavior on opacity {
                         NumberAnimation {
                             duration: 1000
                             easing.type: Easing.OutBounce
+
                         }
                     }
                 }
