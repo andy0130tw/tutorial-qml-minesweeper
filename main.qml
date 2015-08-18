@@ -13,7 +13,7 @@ Window {
     Rectangle {
         id: background
         anchors.fill: parent
-        color: "#33b5e5"
+        color: "#2196f3"
         radius: 20
     }
     Row {
@@ -54,10 +54,9 @@ Window {
             id: cell
             model: table.columns * table.rows
             Button {
+                id: cellBtn
                 width: table.cellWidth
                 height: width
-                text: opened ? (isMine ? "X" : numMineAround) : (marked ? "+" : "")
-                opacity: opened && (numMineAround == 0) ? .3 : 1
                 property bool isMine: false
                 property bool marked: false
                 property bool opened: false
@@ -71,6 +70,44 @@ Window {
                     easing.type: Easing.OutCubic
                   }
                 }
+
+                states: [
+                    State {
+                        when: opened && isMine
+                        PropertyChanges {
+                            target: highlight
+                            opacity: 0.6
+                            color: "#ff5722"
+                        }
+                        PropertyChanges {
+                            target: cellBtn
+                            text: "X"
+                        }
+                    },
+                    State {
+                        when: opened && !isMine
+                        PropertyChanges {
+                            target: highlight
+                            opacity: 0
+                        }
+                        PropertyChanges {
+                            target: cellBtn
+                            text: numMineAround || ""
+                        }
+                    },
+                    State {
+                        when: marked
+                        PropertyChanges {
+                            target: highlight
+                            opacity: 0.6
+                            color: "#8bc34a"
+                        }
+                        PropertyChanges {
+                            target: cellBtn
+                            text: "✧"
+                        }
+                    }
+                ]
 
                 MouseArea {
                     anchors.fill: parent
@@ -105,32 +142,13 @@ Window {
                 Rectangle {
                     id: highlight
                     anchors.fill: parent
-                    opacity: 0.25
-                    //color: "blue"
-                    states: [
-                        State {
-                            name: "red"
-                            when: opened && isMine
-                            PropertyChanges {
-                                target: highlight
-                                opacity: 0.8
-                                color: "red"
-                            }
-                        },
-                        State {
-                            name: "revealed"
-                            when: opened && !isMine
-                            PropertyChanges {
-                                target: highlight
-                                opacity: 0
-                            }
-                        }
-                    ]
-                        Behavior on opacity {
+                    opacity: 0.4
+                    radius: 5
+                    color: "#3f51b5"
+                    Behavior on opacity {
                         NumberAnimation {
                             duration: 1000
                             easing.type: Easing.OutBounce
-
                         }
                     }
                 }
