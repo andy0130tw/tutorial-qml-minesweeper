@@ -215,7 +215,8 @@ Window {
     function open(index) {
         if (cell.itemAt(index).opened || cell.itemAt(index).marked) return;
         cell.itemAt(index).opened = true;
-        if (!cell.itemAt(index).numMineAround) openAround(index);
+        if (cell.itemAt(index).isMine) openAllMines();
+        else if (!cell.itemAt(index).numMineAround) openAround(index);
     }
 
     function openAround(index) {
@@ -226,6 +227,15 @@ Window {
                 if (0 <= x + dx && x + dx < table.rows && 0 <= y + dy && y + dy < table.columns) {
                     open(shiftedIndex);
                 }
+            }
+        }
+    }
+
+    function openAllMines() {
+        for(var i = 0; i < table.rows; ++i) {
+            for(var j = 0; j < table.columns; ++j) {
+                var index = i * table.columns + j;
+                if (cell.itemAt(index).isMine) open(index);
             }
         }
     }
