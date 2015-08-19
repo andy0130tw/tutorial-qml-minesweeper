@@ -64,14 +64,19 @@ Window {
                 onClicked: {
                     open(index);
                 }
-                Behavior on opacity {
-                  NumberAnimation {
-                    duration: 100
-                    easing.type: Easing.OutCubic
-                  }
-                }
-
                 states: [
+                    State {
+                        when: !opened && !marked
+                        PropertyChanges {
+                            target: highlight
+                            opacity: 0.4
+                            color: "#3f51b5"
+                        }
+                        PropertyChanges {
+                            target: cellBtn
+                            text: ""
+                        }
+                    },
                     State {
                         when: opened && isMine
                         PropertyChanges {
@@ -160,7 +165,7 @@ Window {
                     color: "#3f51b5"
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 1000
+                            duration: 500
                             easing.type: Easing.OutBounce
                         }
                     }
