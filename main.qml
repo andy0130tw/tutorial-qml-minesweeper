@@ -57,10 +57,10 @@ Window {
                 id: cellBtn
                 width: table.cellWidth
                 height: width
-                property bool isMine: false
-                property bool marked: false
-                property bool opened: false
-                property int numMineAround: 0
+                property bool isMine
+                property bool marked
+                property bool opened
+                property int numMineAround
                 onClicked: {
                     open(index);
                 }
@@ -96,11 +96,23 @@ Window {
                         }
                     },
                     State {
-                        when: marked
+                        when: marked && (!gameOver || isMine)
                         PropertyChanges {
                             target: highlight
                             opacity: 0.6
                             color: "#8bc34a"
+                        }
+                        PropertyChanges {
+                            target: cellBtn
+                            text: "✧"
+                        }
+                    },
+                    State {
+                        when: marked && gameOver && !isMine
+                        PropertyChanges {
+                            target: highlight
+                            opacity: 0.6
+                            color: "#FF9900"
                         }
                         PropertyChanges {
                             target: cellBtn
@@ -113,6 +125,7 @@ Window {
                     anchors.fill: parent
                     acceptedButtons: Qt.RightButton | Qt.MiddleButton
                     onClicked: {
+                        if (gameOver) return;
                         if (mouse.button == Qt.RightButton) {
                             if(parent.marked) {
                                 parent.marked = false;
@@ -162,6 +175,7 @@ Window {
         text: numMineLeft
     }
 
+    property bool gameOver
     property int numMine
     property int numMineLeft
 
@@ -171,6 +185,7 @@ Window {
         numMine = num_mine;
         numMineLeft = num_mine;
         rearrangeMine();
+        gameOver = false;
     }
 
     function rearrangeMine() {
@@ -213,9 +228,9 @@ Window {
     }
 
     function open(index) {
-        if (cell.itemAt(index).opened || cell.itemAt(index).marked) return;
+        if (gameOver || cell.itemAt(index).opened || cell.itemAt(index).marked) return;
         cell.itemAt(index).opened = true;
-        if (cell.itemAt(index).isMine) openAllMines();
+        if (cell.itemAt(index).isMine) explode();
         else if (!cell.itemAt(index).numMineAround) openAround(index);
     }
 
@@ -231,13 +246,15 @@ Window {
         }
     }
 
-    function openAllMines() {
+    function explode() {
+        // open all mines
         for(var i = 0; i < table.rows; ++i) {
             for(var j = 0; j < table.columns; ++j) {
                 var index = i * table.columns + j;
                 if (cell.itemAt(index).isMine) open(index);
             }
         }
+        gameOver = true;
     }
 
     Component.onCompleted: {
